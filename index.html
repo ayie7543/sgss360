@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="ms" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SGSS 360 FLOAT Verification</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SGSS 360">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CDN Libraries: Tesseract.js, PDF.js, SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+    .scanner-laser {
+      animation: scanline 2.2s infinite ease-in-out;
+    }
+    @keyframes scanline {
+      0%, 100% { top: 10%; }
+      50% { top: 88%; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- Top App Bar -->
+  <header class="sticky top-0 z-30 bg-slate-900 dark:bg-slate-900 text-white shadow-lg border-b border-slate-800">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950 font-extrabold text-lg shadow-md shadow-emerald-500/20">
+          <i class="fa-solid fa-check-double"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-tight">SGSS 360 FLOAT</h1>
+          <p id="activeFileInfo" class="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-xs">
+            Fail: Master List (168 Rekod)
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="installAppBtn" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow transition flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i>
+          <span>Pasang APK</span>
+        </button>
+
+        <button id="themeToggleBtn" aria-label="Tukar Tema" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-sun text-amber-400 hidden dark:inline"></i>
+          <i class="fa-solid fa-moon text-slate-300 inline dark:hidden"></i>
+        </button>
+
+        <button id="openMenuBtn" aria-label="Menu Pengurusan" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Verification Progress Banner -->
+    <div class="bg-slate-800/90 px-4 py-2 border-t border-slate-700/70">
+      <div class="max-w-3xl mx-auto">
+        <div class="flex items-center justify-between text-xs font-medium mb-1.5">
+          <span class="text-slate-300">Status Pengesahan Harian</span>
+          <span id="counterText" class="font-bold text-emerald-400">Disahkan: 0 / 168 (0%)</span>
+        </div>
+        <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+          <div id="progressBar" class="bg-emerald-500 h-full transition-all duration-300 rounded-full" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-3 sm:px-4 py-4 space-y-4">
+
+    <!-- Quick Action Grid -->
+    <section class="grid grid-cols-2 gap-3">
+      <button id="openCameraBtn" class="bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-md shadow-emerald-900/20 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer">
+        <div class="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-camera"></i>
+        </div>
+        <span class="font-bold text-sm">Imbas Kamera / OCR</span>
+        <span class="text-[11px] text-emerald-100/80 text-center">Auto-Tanda "BETUL"</span>
+      </button>
+
+      <button id="openUploadBtn" class="bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 active:scale-[0.98] text-white p-3.5 rounded-2xl shadow-md shadow-blue-900/20 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer">
+        <div class="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center text-xl">
+          <i class="fa-solid fa-file-arrow-up"></i>
+        </div>
+        <span class="font-bold text-sm">Muat Naik Fail Harian</span>
+        <span class="text-[11px] text-blue-100/80 text-center">PDF, Excel, CSV atau JSON</span>
+      </button>
+    </section>
+
+    <!-- Search Bar & Add New Button -->
+    <section class="bg-white dark:bg-slate-900 p-3 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+      <div class="relative flex items-center">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400"></i>
+        <input 
+          type="text" 
+          id="searchInput" 
+          placeholder="Cari Customer ID, Location ID, atau Nama..." 
+          class="w-full pl-10 pr-20 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+        >
+        <button id="clearSearchBtn" class="hidden absolute right-3 px-2.5 py-1 bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-semibold hover:bg-slate-400 cursor-pointer">
+          Padam
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+          <button data-filter="all" class="filter-tab active px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition cursor-pointer">
+            Semua (<span id="countAll">168</span>)
+          </button>
+          <button data-filter="verified" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer">
+            Betul (<span id="countVerified">0</span>)
+          </button>
+          <button data-filter="unverified" class="filter-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer">
+            Belum (<span id="countUnverified">168</span>)
+          </button>
+        </div>
+
+        <button id="addRecordBtn" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition cursor-pointer">
+          <i class="fa-solid fa-plus"></i>
+          <span>Tambah Rekod</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- OCR Result Banner -->
+    <div id="ocrResultBanner" class="hidden bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500 rounded-2xl p-3.5 shadow-md space-y-3">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <span class="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+            <i class="fa-solid fa-circle-check"></i> Keputusan Imbasan OCR
+          </span>
+          <p id="ocrExtractedSummary" class="text-xs text-slate-700 dark:text-slate-300 mt-1 font-mono bg-white/70 dark:bg-slate-900/70 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800/60 max-h-20 overflow-y-auto"></p>
+        </div>
+        <button id="closeOcrBannerBtn" class="text-slate-500 hover:text-slate-800 dark:hover:text-white p-1 cursor-pointer">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Records List Container -->
+    <section id="recordsList" class="space-y-3 pb-4">
+      <!-- Cards injected via JS -->
+    </section>
+
+    <div id="emptyState" class="hidden text-center py-12 px-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3 text-2xl">
+        <i class="fa-solid fa-folder-open"></i>
+      </div>
+      <h3 class="font-bold text-base text-slate-700 dark:text-slate-200">Tiada Rekod Ditemui</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
+        Tiada padanan untuk carian atau penapis semasa. Cuba kata kunci lain atau tambah rekod baharu.
+      </p>
+    </div>
+
+  </main>
+
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 px-4 mt-auto">
+    <div class="max-w-3xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <p class="font-semibold text-slate-700 dark:text-slate-300">SGSS 360 FLOAT Verification System</p>
+      <p class="font-bold text-emerald-600 dark:text-emerald-400">&copy; 2026 Ayie.tech</p>
+    </div>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Camera & OCR Scanner Modal -->
+  <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col max-h-[92vh]">
+      <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-camera text-emerald-400"></i>
+          <h2 class="font-bold text-sm">Pengimbas Kamera (OCR)</h2>
+        </div>
+        <button id="closeCameraModalBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 overflow-y-auto space-y-4">
+        <div class="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border-2 border-slate-700 flex items-center justify-center">
+          <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+          <canvas id="captureCanvas" class="hidden"></canvas>
+          <img id="previewCapturedImg" class="hidden w-full h-full object-contain bg-black" alt="Pratonton Gambar">
+          
+          <div id="scannerOverlay" class="absolute inset-6 border-2 border-emerald-400/70 rounded-xl pointer-events-none">
+            <div class="scanner-laser absolute left-0 right-0 h-0.5 bg-emerald-400 shadow-[0_0_8px_#34d399]"></div>
+          </div>
+
+          <div id="cameraPlaceholder" class="hidden text-center p-4 text-slate-400 text-xs">
+            <i class="fa-solid fa-video-slash text-3xl mb-2 text-slate-500"></i>
+            <p>Kamera langsung tidak tersedia. Sila gunakan butang di bawah.</p>
+          </div>
+        </div>
+
+        <div id="ocrStatusBox" class="hidden bg-slate-100 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-spinner fa-spin text-emerald-500 text-lg"></i>
+            <div class="flex-1">
+              <p id="ocrStatusText" class="text-xs font-bold text-slate-800 dark:text-slate-200">Membaca teks daripada gambar...</p>
+              <div class="w-full bg-slate-300 dark:bg-slate-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                <div id="ocrProgressBar" class="bg-emerald-500 h-full transition-all duration-200" style="width: 15%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <button id="snapPhotoBtn" type="button" class="py-3 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 transition cursor-pointer">
+            <i class="fa-solid fa-camera-retro text-base"></i>
+            <span>Tangkap Skrin</span>
+          </button>
+
+          <label class="py-3 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 cursor-pointer transition">
+            <i class="fa-solid fa-mobile-screen-button text-base"></i>
+            <span>Buka Kamera HP</span>
+            <input type="file" id="ocrNativeCameraInput" accept="image/*" capture="environment" class="hidden">
+          </label>
+        </div>
+
+        <label class="w-full py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl shadow flex items-center justify-center gap-2 cursor-pointer transition">
+          <i class="fa-solid fa-image text-base"></i>
+          <span>Pilih Foto dari Galeri / Fail</span>
+          <input type="file" id="ocrImageInput" accept="image/*" class="hidden">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Daily File Upload Modal -->
+  <div id="uploadModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-slate-700">
+      <div class="px-4 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-file-import text-blue-400"></i>
+          <h2 class="font-bold text-sm">Muat Naik Fail Harian SGSS 360</h2>
+        </div>
+        <button id="closeUploadModalBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <div class="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-2xl p-3 text-xs text-blue-800 dark:text-blue-300 space-y-1">
+          <p class="font-bold"><i class="fa-solid fa-circle-info mr-1"></i> Format Fail Disokong:</p>
+          <p>• <b>PDF</b> (Dokumen rasmi SGSS 360 FLOAT harian)</p>
+          <p>• <b>Excel / CSV</b> (.xlsx, .xls, .csv)</p>
+          <p>• <b>JSON</b> (Sandaran data daripada aplikasi ini)</p>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Mod Kemas Kini Senarai:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 cursor-pointer bg-slate-50 dark:bg-slate-800">
+              <input type="radio" name="importMode" value="replace" checked class="accent-emerald-500">
+              <span class="text-xs font-semibold">Ganti Semua (Harian)</span>
+            </label>
+            <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 cursor-pointer bg-slate-50 dark:bg-slate-800">
+              <input type="radio" name="importMode" value="merge" class="accent-emerald-500">
+              <span class="text-xs font-semibold">Gabung Rekod Baru</span>
+            </label>
+          </div>
+        </div>
+
+        <label class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition bg-slate-50 dark:bg-slate-800/50">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500 mb-2"></i>
+          <span class="text-sm font-bold text-slate-800 dark:text-slate-200">Tekan untuk Pilih Fail</span>
+          <span class="text-xs text-slate-500 mt-1">PDF, XLSX, XLS, CSV, atau JSON</span>
+          <input type="file" id="dailyFileInput" accept=".pdf,.csv,.xlsx,.xls,.json,.txt" class="hidden">
+        </label>
+
+        <div id="uploadStatusMsg" class="hidden text-xs font-semibold p-3 rounded-xl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Add / Edit Record Modal -->
+  <div id="editModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-slate-700">
+      <div class="px-4 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+          <h2 id="editModalTitle" class="font-bold text-sm">Sunting Rekod Lokasi</h2>
+        </div>
+        <button id="closeEditModalBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="editRecordForm" class="p-4 space-y-3.5">
+        <input type="hidden" id="editRecordId">
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">No.</label>
+            <input type="number" id="fieldNo" required class="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">SDC Bank</label>
+            <input type="text" id="fieldBank" value="MBB_InterBank" required class="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Customer ID *</label>
+            <input type="text" id="fieldCustomerId" placeholder="cth: CROCS" required class="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold uppercase">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Location ID *</label>
+            <input type="text" id="fieldLocationId" placeholder="cth: MD60169" required class="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold uppercase">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">Nama Lokasi (Location Name) *</label>
+          <input type="text" id="fieldLocationName" placeholder="cth: CROCS TRX - N" required class="w-full px-3 py-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-semibold uppercase">
+        </div>
+
+        <div class="flex items-center justify-between pt-2 gap-2">
+          <button type="button" id="deleteRecordBtn" class="hidden px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+            <i class="fa-solid fa-trash"></i>
+            <span>Padam</span>
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" id="cancelEditBtn" class="px-4 py-2.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold cursor-pointer">
+              Batal
+            </button>
+            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow cursor-pointer">
+              Simpan Rekod
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Settings & Export Management Modal -->
+  <div id="menuModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl border border-slate-700">
+      <div class="px-4 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-emerald-400"></i>
+          <h2 class="font-bold text-sm">Pengurusan Data &amp; Laporan</h2>
+        </div>
+        <button id="closeMenuModalBtn" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <!-- WhatsApp Share -->
+        <button id="shareWhatsappBtn" class="w-full p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex items-center justify-between transition cursor-pointer">
+          <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-lg">
+              <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-emerald-800 dark:text-emerald-300">Hantar Laporan ke WhatsApp</p>
+              <p class="text-xs text-emerald-600 dark:text-emerald-400">Kongsi fail CSV terus ke WhatsApp</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-share-nodes text-emerald-500"></i>
+        </button>
+
+        <!-- Export CSV -->
+        <button id="exportCsvBtn" class="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-between transition cursor-pointer">
+          <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl bg-slate-500/20 text-slate-500 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-file-csv"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold">Eksport Laporan CSV / Excel</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Muat turun status pengesahan hari ini</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-400"></i>
+        </button>
+
+        <!-- Export JSON Backup -->
+        <button id="exportJsonBtn" class="w-full p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-between transition cursor-pointer">
+          <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-500 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-file-code"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold">Sandaran Data (JSON)</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Simpan semua rekod yang telah disunting</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-slate-400"></i>
+        </button>
+
+        <!-- Reset Checkmarks -->
+        <button id="resetChecksBtn" class="w-full p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 flex items-center justify-between transition cursor-pointer">
+          <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-rotate-left"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-amber-600 dark:text-amber-400">Reset Semua Tanda Betul</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Kosongkan tanda betul untuk hari baru</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-amber-500"></i>
+        </button>
+
+        <!-- Restore Default -->
+        <button id="restoreDefaultBtn" class="w-full p-3.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 flex items-center justify-between transition cursor-pointer">
+          <div class="flex items-center gap-3 text-left">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center text-lg">
+              <i class="fa-solid fa-database"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-rose-600 dark:text-rose-400">Pulihkan 168 Rekod Asal</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Kembali ke senarai penuh SGSS 360 FLOAT</p>
+            </div>
+          </div>
+          <i class="fa-solid fa-chevron-right text-rose-500"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Confirmation Dialog -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-5 shadow-2xl border border-slate-700 space-y-4 text-center">
+      <div class="w-12 h-12 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div>
+        <h3 id="confirmTitle" class="font-bold text-base">Sahkan Tindakan</h3>
+        <p id="confirmMessage" class="text-xs text-slate-500 dark:text-slate-400 mt-1"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2.5 pt-1">
+        <button id="confirmCancelBtn" class="py-2.5 px-4 rounded-xl bg-slate-200 dark:bg-slate-800 text-xs font-bold cursor-pointer">Batal</button>
+        <button id="confirmOkBtn" class="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">Ya, Teruskan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 transition-all duration-300 transform translate-y-4">
+    <div id="toastInner" class="bg-slate-900 dark:bg-slate-800 text-white px-4 py-2.5 rounded-full shadow-xl border border-slate-700 text-xs font-bold flex items-center gap-2 whitespace-nowrap">
+      <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+      <span id="toastText">Berjaya disimpan</span>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // GLOBAL ERROR HANDLER (Untuk kesan ralat)
+    // ==========================================
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error("Ralat JavaScript dikesan:", message, "di baris", lineno);
+      // alert("Ralat Sistem: " + message); // Buka komen ini jika mahu lihat ralat
+      return false;
+    };
+
+    // ==========================================
+    // 1. MASTER DATASET (ALL 168 SGSS 360 RECORDS)
+    // ==========================================
+    const DEFAULT_MASTER_RECORDS = [
+      { no: 1, bank: "MBB_InterBank", customerId: "ASCOT", locationId: "SL80190", locationName: "ASCOTT STAR KLCC - N" },
+      { no: 2, bank: "MBB_InterBank", customerId: "BHP", locationId: "701340", locationName: "BHP JENJAROM 2 - N" },
+      { no: 3, bank: "MBB_InterBank", customerId: "BHP", locationId: "HH0296", locationName: "BHP KL KARAK HIGHWAY - N" },
+      { no: 4, bank: "MBB_InterBank", customerId: "BT", locationId: "4641", locationName: "BREADTALK PAVILLION - N" },
+      { no: 5, bank: "MBB_InterBank", customerId: "BT", locationId: "700374", locationName: "FOOD REPUBLIC PAVILION BUKIT JALIL - N" },
+      { no: 6, bank: "MBB_InterBank", customerId: "BT", locationId: "1972", locationName: "BREAD TALK - N" },
+      { no: 7, bank: "MBB_InterBank", customerId: "BYTSB", locationId: "700789", locationName: "BONKEE YUAN PEKAN BATU 11 - N" },
+      { no: 8, bank: "MBB_InterBank", customerId: "CALTEX", locationId: "HH0192", locationName: "CALTEX AMAN DENGKIL - N" },
+      { no: 9, bank: "MBB_InterBank", customerId: "CAREC", locationId: "701468", locationName: "KLINIK MKZ SEK 9 BANGI - N" },
+      { no: 10, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5086", locationName: "POLIKLINIK SAI BESTARI JAYA - N" },
+      { no: 11, bank: "MBB_InterBank", customerId: "CAREC", locationId: "SL80070", locationName: "KLINIK MENARA BUKIT JELUTONG - N" },
+      { no: 12, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5147", locationName: "KLINIK ALAM MEDIC JENJAROM - N" },
+      { no: 13, bank: "MBB_InterBank", customerId: "CAREC", locationId: "SL80051", locationName: "KSI SAMUDRA - N" },
+      { no: 14, bank: "MBB_InterBank", customerId: "CAREC", locationId: "SL80017", locationName: "POLIKLINIK LOH TMN SG BESI - N" },
+      { no: 15, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5020", locationName: "KLINIK RAPHA SG BULOH - N" },
+      { no: 16, bank: "MBB_InterBank", customerId: "CAREC", locationId: "SL80166", locationName: "KLINIK MEDIC BLISS - N" },
+      { no: 17, bank: "MBB_InterBank", customerId: "CAREC", locationId: "2735", locationName: "KWS RAWANG - N" },
+      { no: 18, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5255", locationName: "KLINIK IKHWAN SAUJANA UTAMA - N" },
+      { no: 19, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5153", locationName: "PKC CHERAS - N" },
+      { no: 20, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5102", locationName: "KLINIK DR SELVAA SEMENYIH - N" },
+      { no: 21, bank: "MBB_InterBank", customerId: "CAREC", locationId: "701469", locationName: "KLINIK DR LIAU & SIAH - N" },
+      { no: 22, bank: "MBB_InterBank", customerId: "CAREC", locationId: "SL80052", locationName: "KSI SELAYANG JAYA - N" },
+      { no: 23, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5018", locationName: "MUC BUKIT BINTANG - N" },
+      { no: 24, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5229", locationName: "CAREPOINT BANTING - N" },
+      { no: 25, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5094", locationName: "KWS SENTOSA - N" },
+      { no: 26, bank: "MBB_InterBank", customerId: "CAREC", locationId: "5024", locationName: "KWS COUNTRY HOMES - N" },
+      { no: 27, bank: "MBB_InterBank", customerId: "COLUMBIA", locationId: "701350", locationName: "COLUMBIA ASIA HOSPITAL BUKIT RIMAU - N" },
+      { no: 28, bank: "MBB_InterBank", customerId: "CROCS", locationId: "SL80336", locationName: "CROCS SUNWAY VELOCITY - N" },
+      { no: 29, bank: "MBB_InterBank", customerId: "CROCS", locationId: "SL80283", locationName: "CROCS NU SENTRAL SHOPPING CENTRE - N" },
+      { no: 30, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60169", locationName: "CROCS TRX - N" },
+      { no: 31, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60159", locationName: "CROCS PAVILION DAMANSARA - N" },
+      { no: 32, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60163", locationName: "CROCS LALAPORT - N" },
+      { no: 33, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60150", locationName: "CROCS PAVILION KL - N" },
+      { no: 34, bank: "MBB_InterBank", customerId: "CROCS", locationId: "SL80311", locationName: "CROCS KL EAST MALL - N" },
+      { no: 35, bank: "MBB_InterBank", customerId: "CROCS", locationId: "SL80295", locationName: "CROCS PAVILION BUKIT JALIL - N" },
+      { no: 36, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60158", locationName: "CROCS ONE UTAMA - N" },
+      { no: 37, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60164", locationName: "CROCS SUNWAY PYRAMID - N" },
+      { no: 38, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60155", locationName: "CROCS IOI CITY - N" },
+      { no: 39, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60168", locationName: "CROCS KLCC - N" },
+      { no: 40, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60170", locationName: "CROCS IOI PUCHONG - N" },
+      { no: 41, bank: "MBB_InterBank", customerId: "CROCS", locationId: "MD60152", locationName: "CROCS CENTRAL I-CITY - N" },
+      { no: 42, bank: "MBB_InterBank", customerId: "EJUTA", locationId: "701224", locationName: "JUTA PARKING PAVILION BKT JALIL - N" },
+      { no: 43, bank: "MBB_InterBank", customerId: "EXPAT", locationId: "HH0360", locationName: "EXPAT SERVICES KOMERSIAL SOUTHGATE 2 - N" },
+      { no: 44, bank: "MBB_InterBank", customerId: "FRESHB", locationId: "700685", locationName: "FRESH BOULEVARD TMN BUKIT SERDANG - N" },
+      { no: 45, bank: "MBB_InterBank", customerId: "GGACC", locationId: "HL0122", locationName: "GLENMARIE GOLF & COUNTRY CLUB SHAH ALAM - N" },
+      { no: 46, bank: "MBB_InterBank", customerId: "HAOX", locationId: "HL0494", locationName: "RESTORAN SEAFOOD DBENDANG AMPANG - N" },
+      { no: 47, bank: "MBB_InterBank", customerId: "HAOX", locationId: "HL0483", locationName: "HAO XIANG CHI UNITED POINT - N" },
+      { no: 48, bank: "MBB_InterBank", customerId: "HAOX", locationId: "HL0482", locationName: "HAO XIANG CHI PUDU - N" },
+      { no: 49, bank: "MBB_InterBank", customerId: "HAOX", locationId: "HL0488", locationName: "HAO XIANG CHI SETIA ALAM - N" },
+      { no: 50, bank: "MBB_InterBank", customerId: "HAVANA", locationId: "5152", locationName: "HAVANA BAR & GRILL BKT BINTANG - N" },
+      { no: 51, bank: "MBB_InterBank", customerId: "HDL", locationId: "HH0161", locationName: "HAI DI LAO PAVILION BKT JALIL 2 - N" },
+      { no: 52, bank: "MBB_InterBank", customerId: "HDL", locationId: "2203", locationName: "HAI DI LAO IOI PUTRAJAYA - N" },
+      { no: 53, bank: "MBB_InterBank", customerId: "HDL", locationId: "MD60054", locationName: "HAI DI LAO SETIA CITY MALL - N" },
+      { no: 54, bank: "MBB_InterBank", customerId: "HDL", locationId: "MD60057", locationName: "HAI DI LAO SUNWAY VELOCITY - N" },
+      { no: 55, bank: "MBB_InterBank", customerId: "HDL", locationId: "MD60055", locationName: "HAI DI LAO ONE UTAMA - N" },
+      { no: 56, bank: "MBB_InterBank", customerId: "HDL", locationId: "1185", locationName: "HAI DI LAO - PAVILION - N" },
+      { no: 57, bank: "MBB_InterBank", customerId: "HDL", locationId: "700684", locationName: "HAI DI LAO SUNWAY PYRAMID - N" },
+      { no: 58, bank: "MBB_InterBank", customerId: "HDL", locationId: "3025", locationName: "HAI DI LAO BANGSAR VILLAGE - N" },
+      { no: 59, bank: "MBB_InterBank", customerId: "HUGO", locationId: "HL0293", locationName: "HUGO BOSS PAVILION DAMANSARA - N" },
+      { no: 60, bank: "MBB_InterBank", customerId: "HUGO", locationId: "HL0421", locationName: "HUGO BOSS KLCC - N" },
+      { no: 61, bank: "MBB_InterBank", customerId: "HUGO", locationId: "HL0411", locationName: "HUGO BOSS TRX EXCHANGE - N" },
+      { no: 62, bank: "MBB_InterBank", customerId: "HUGO", locationId: "HL0374", locationName: "HUGO BOSS PAVILION - N" },
+      { no: 63, bank: "MBB_InterBank", customerId: "HUGO", locationId: "SL80436", locationName: "HUGO BOSS KLCC 2 - N" },
+      { no: 64, bank: "MBB_InterBank", customerId: "IICOMB", locationId: "SL80180", locationName: "GENTLE MONSTER KLCC - N" },
+      { no: 65, bank: "MBB_InterBank", customerId: "IICOMB", locationId: "700675", locationName: "IICOMBINED THE EXCHANGE TRX - N" },
+      { no: 66, bank: "MBB_InterBank", customerId: "IOI", locationId: "2128", locationName: "PALM GARDEN GOLF CLUB - N" },
+      { no: 67, bank: "MBB_InterBank", customerId: "IOICITY", locationId: "352", locationName: "IOI ICE RINK - N" },
+      { no: 68, bank: "MBB_InterBank", customerId: "IOICITY", locationId: "227", locationName: "IOI DISTRICT 21 - N" },
+      { no: 69, bank: "MBB_InterBank", customerId: "KDP", locationId: "5495", locationName: "KLINIK DAMAI PERDANA - N" },
+      { no: 70, bank: "MBB_InterBank", customerId: "LHH", locationId: "700807", locationName: "LEIN HING CHERAS - N" },
+      { no: 71, bank: "MBB_InterBank", customerId: "LHH", locationId: "700913", locationName: "LEIN HING KLANG - N" },
+      { no: 72, bank: "MBB_InterBank", customerId: "LHH", locationId: "2890", locationName: "LEIN HING HOLDINGS - N" },
+      { no: 73, bank: "MBB_InterBank", customerId: "LISETTE", locationId: "MD60027", locationName: "BLUEFIRE DESA PARK CITY - N" },
+      { no: 74, bank: "MBB_InterBank", customerId: "LISETTE", locationId: "MD60029", locationName: "BLUEFIRE JLN SS16 - N" },
+      { no: 75, bank: "MBB_InterBank", customerId: "LISETTE", locationId: "MD60028", locationName: "THE SOCIAL PUBLIKA - N" },
+      { no: 76, bank: "MBB_InterBank", customerId: "LISETTE", locationId: "700543", locationName: "LISETTE CAFE & RESTAURANT - N" },
+      { no: 77, bank: "MBB_InterBank", customerId: "LUCKYF", locationId: "SL80410", locationName: "LUCKY FROZEN SUBANG - N" },
+      { no: 78, bank: "MBB_InterBank", customerId: "LUCKYF", locationId: "SL80421", locationName: "LUCKY FROZEN PUDU - N" },
+      { no: 79, bank: "MBB_InterBank", customerId: "LUCKYF", locationId: "581", locationName: "LUCKY FROZEN SEGAMBUT - N" },
+      { no: 80, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "196", locationName: "MACHINES BUKIT TINGGI - N" },
+      { no: 81, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "2490", locationName: "MACHINES IOI CITY MALL - N" },
+      { no: 82, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "366", locationName: "MACHINES THE GARDENS - N" },
+      { no: 83, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "25", locationName: "MACHINES KLCC - N" },
+      { no: 84, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "26", locationName: "MACHINES MIDVALLEY MEGAMALL - N" },
+      { no: 85, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "3029", locationName: "MACHINES BANDAR UTAMA - N" },
+      { no: 86, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "663", locationName: "MACHINES SETIA CITY - N" },
+      { no: 87, bank: "MBB_InterBank", customerId: "MACHINES", locationId: "264", locationName: "MACHINES SUNWAY PYRAMID - N" },
+      { no: 88, bank: "MBB_InterBank", customerId: "MAS", locationId: "SL80038", locationName: "MAG NU SENTRAL - N" },
+      { no: 89, bank: "MBB_InterBank", customerId: "MAS", locationId: "5233", locationName: "MAG PARADIGM MALL - N" },
+      { no: 90, bank: "MBB_InterBank", customerId: "MAS", locationId: "SL80080", locationName: "MAG SKYPARK SUBANG AIRPORT - N" },
+      { no: 91, bank: "MBB_InterBank", customerId: "MASAT", locationId: "701405", locationName: "MASJID AT-TAQWA TMN TTDI - N" },
+      { no: 92, bank: "MBB_InterBank", customerId: "MBSA", locationId: "1632", locationName: "MBSA HQ - N" },
+      { no: 93, bank: "MBB_InterBank", customerId: "MERIDIEN", locationId: "5513", locationName: "LE MERIDIEN PETALING JAYA - N" },
+      { no: 94, bank: "MBB_InterBank", customerId: "MPI", locationId: "700507", locationName: "BEST DOT RESOURCES KUALA LANGAT - N" },
+      { no: 95, bank: "MBB_InterBank", customerId: "MPI", locationId: "700506", locationName: "VALUE DOT RESOURCES SDN BHD - N" },
+      { no: 96, bank: "MBB_InterBank", customerId: "MPI", locationId: "700387", locationName: "TRANSCENDENT GAINS SDN BHD - N" },
+      { no: 97, bank: "MBB_InterBank", customerId: "MSUAK", locationId: "HL0167", locationName: "MASJID SAIDINA UMAR AL KHATTAB - N" },
+      { no: 98, bank: "MBB_InterBank", customerId: "NSK", locationId: "835", locationName: "NSK CHOW KIT - N" },
+      { no: 99, bank: "MBB_InterBank", customerId: "PCSGT", locationId: "3093", locationName: "PCI GAS TRADING - N" },
+      { no: 100, bank: "MBB_InterBank", customerId: "PETRON", locationId: "614", locationName: "PETRON IMAN FUEL - N" },
+      { no: 101, bank: "MBB_InterBank", customerId: "PETRON", locationId: "636", locationName: "PETRON SHAXXON - N" },
+      { no: 102, bank: "MBB_InterBank", customerId: "PETRON", locationId: "814", locationName: "PETRON BATU 3.5 - N" },
+      { no: 103, bank: "MBB_InterBank", customerId: "PETRON", locationId: "841", locationName: "PETRON TERAS FIEZTA - N" },
+      { no: 104, bank: "MBB_InterBank", customerId: "PETRON", locationId: "580", locationName: "PETRON ELITE FUEL - N" },
+      { no: 105, bank: "MBB_InterBank", customerId: "PETRON", locationId: "418", locationName: "PETRON STEEL FUELS - N" },
+      { no: 106, bank: "MBB_InterBank", customerId: "PETRON", locationId: "HL0045", locationName: "PETRON SS14 SUBANG JAYA - N" },
+      { no: 107, bank: "MBB_InterBank", customerId: "PETRON", locationId: "441", locationName: "PETRON FIEZTA ENERGY - N" },
+      { no: 108, bank: "MBB_InterBank", customerId: "PETRON", locationId: "701173", locationName: "PETRON KM11 SG BULOH - N" },
+      { no: 109, bank: "MBB_InterBank", customerId: "PETRON", locationId: "1625", locationName: "PETRON WARISAN KHAZANAH - N" },
+      { no: 110, bank: "MBB_InterBank", customerId: "PETRON", locationId: "542", locationName: "PETRON ASHROSA - N" },
+      { no: 111, bank: "MBB_InterBank", customerId: "PETRON", locationId: "700457", locationName: "PETRON SEMENTA - N" },
+      { no: 112, bank: "MBB_InterBank", customerId: "PETRON", locationId: "501", locationName: "PETRON FOSSIL FUELS - N" },
+      { no: 113, bank: "MBB_InterBank", customerId: "PETRON", locationId: "1976", locationName: "PETRON SINAR HAKIM - N" },
+      { no: 114, bank: "MBB_InterBank", customerId: "PETRON", locationId: "413", locationName: "PETRON IOI PARK - N" },
+      { no: 115, bank: "MBB_InterBank", customerId: "PETRON", locationId: "HL0415", locationName: "PETRON MANJALARA KEPONG - N" },
+      { no: 116, bank: "MBB_InterBank", customerId: "PETRON", locationId: "HL0462", locationName: "PETRON JLN TUN RAZAK - N" },
+      { no: 117, bank: "MBB_InterBank", customerId: "PETRON", locationId: "742", locationName: "PETRON NOOR HAKIIM - N" },
+      { no: 118, bank: "MBB_InterBank", customerId: "PLCI", locationId: "HL0484", locationName: "NOVOTEL KUALA LUMPUR CITY CENTRE - N" },
+      { no: 119, bank: "MBB_InterBank", customerId: "PSTS", locationId: "700383", locationName: "PREMIER STYLE TRADING - N" },
+      { no: 120, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "701404", locationName: "PASARAYA RAKAN KG BARU SUBANG - N" },
+      { no: 121, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "700754", locationName: "PASARAYA RAKAN GOMBAK - N" },
+      { no: 122, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0297", locationName: "PASARAYA RAKAN RAWANG - N" },
+      { no: 123, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0406", locationName: "PASARAYA RAKAN HQ RETAIL - N" },
+      { no: 124, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "SL80354", locationName: "PASARAYA RAKAN SERI KEMBANGAN - N" },
+      { no: 125, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0308", locationName: "PASARAYA RAKAN KAJANG - N" },
+      { no: 126, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0407", locationName: "PASARAYA RAKAN SEMENYIH - N" },
+      { no: 127, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "SL80353", locationName: "PASARAYA RAKAN TAMAN MIDAH - N" },
+      { no: 128, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0160", locationName: "PASARAYA RAKAN SELAYANG - N" },
+      { no: 129, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "701444", locationName: "PASARAYA RAKAN BDR SERI COALFIELDS - N" },
+      { no: 130, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0413", locationName: "PASARAYA RAKAN BANTING - N" },
+      { no: 131, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0158", locationName: "PASARAYA RAKAN JADE HILL KAJANG - N" },
+      { no: 132, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "SL80355", locationName: "PASARAYA RAKAN CHERAS MAJU - N" },
+      { no: 133, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "SL80380", locationName: "PASARAYA RAKAN JRK DELTA - N" },
+      { no: 134, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "701093", locationName: "PASARAYA RAKAN BATANG KALI - N" },
+      { no: 135, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "SL80352", locationName: "PASARAYA RAKAN PEKAN AMPANG - N" },
+      { no: 136, bank: "MBB_InterBank", customerId: "RAKANDA", locationId: "HL0408", locationName: "PASARAYA RAKAN BKT SENTOSA RAWANG - N" },
+      { no: 137, bank: "MBB_InterBank", customerId: "RSG", locationId: "SH70105", locationName: "PLAZA TOL GOMBAK - N" },
+      { no: 138, bank: "MBB_InterBank", customerId: "SAWS", locationId: "HL0424", locationName: "BUDDISHT MAHA VIHARA BRICKFIELDS - N" },
+      { no: 139, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "HH0153", locationName: "SCMARINE PRODUCTS DATARAN VILLA PUTRA - N" },
+      { no: 140, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "1007", locationName: "SCMARINE PRODUCTS GOMBAK - N" },
+      { no: 141, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "701169", locationName: "SCMARINE PRODUCTS SERI KEMBANGAN 1 - N" },
+      { no: 142, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "HH0154", locationName: "SCMARINE PRODUCTS BANDAR SRI DAMANSARA - N" },
+      { no: 143, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "701168", locationName: "SCMARINE PRODUCTS SERI KEMBANGAN 2 - N" },
+      { no: 144, bank: "MBB_InterBank", customerId: "SCMARINE", locationId: "HL0116", locationName: "SCMARINE PRODUCTS SRI SINAR - N" },
+      { no: 145, bank: "MBB_InterBank", customerId: "SKGAS", locationId: "700393", locationName: "S.K GAS (M) SDN BHD - N" },
+      { no: 146, bank: "MBB_InterBank", customerId: "SKMED", locationId: "4903", locationName: "ONE TRANSFER REMITTANCE WISMA LMS - N" },
+      { no: 147, bank: "MBB_InterBank", customerId: "SKMED", locationId: "701075", locationName: "ONE TRANSFER REMITTANCE SHAH ALAM - N" },
+      { no: 148, bank: "MBB_InterBank", customerId: "SLSB", locationId: "700511", locationName: "SUNWAY CLIO HOTEL - N" },
+      { no: 149, bank: "MBB_InterBank", customerId: "SLSB", locationId: "3773", locationName: "SUNWAY RESORT HOTEL SDN BHD - N" },
+      { no: 150, bank: "MBB_InterBank", customerId: "SLSB", locationId: "834", locationName: "SUNWAY MC - N" },
+      { no: 151, bank: "MBB_InterBank", customerId: "SLSB", locationId: "1128", locationName: "SUNMED VELOCITY - N" },
+      { no: 152, bank: "MBB_InterBank", customerId: "SMTSB", locationId: "700781", locationName: "SM TRADING CHERAS - N" },
+      { no: 153, bank: "MBB_InterBank", customerId: "SOGO", locationId: "1420", locationName: "SOGO I-CITY SHAH ALAM - N" },
+      { no: 154, bank: "MBB_InterBank", customerId: "SOGO", locationId: "3809", locationName: "SOGO JLN TUANKU ABDUL RAHMAN 2 - N" },
+      { no: 155, bank: "MBB_InterBank", customerId: "SOGO", locationId: "3866", locationName: "SOGO JLN TUANKU ABDUL RAHMAN 1 - N" },
+      { no: 156, bank: "MBB_InterBank", customerId: "SPTOTO", locationId: "700517", locationName: "ZENITH SUCCESS SDN BHD - N" },
+      { no: 157, bank: "MBB_InterBank", customerId: "SPTOTO", locationId: "700273", locationName: "POWERFUL SALES SDN BHD - N" },
+      { no: 158, bank: "MBB_InterBank", customerId: "SPTOTO", locationId: "700505", locationName: "TOPAZ FUTURES SDN BHD - N" },
+      { no: 159, bank: "MBB_InterBank", customerId: "SPTOTO", locationId: "700508", locationName: "MERDU INDAH PUCHONG - N" },
+      { no: 160, bank: "MBB_InterBank", customerId: "TENBY", locationId: "550", locationName: "TENBY SCHOOL ECOHILL - N" },
+      { no: 161, bank: "MBB_InterBank", customerId: "TENBY", locationId: "507", locationName: "TENBY SETIA ECO PARK - N" },
+      { no: 162, bank: "MBB_InterBank", customerId: "TWFJ", locationId: "4936", locationName: "T&W FOOD JUNCTION IOI PUTRAJAYA - N" },
+      { no: 163, bank: "MBB_InterBank", customerId: "UGTT", locationId: "HH0388", locationName: "UTAMA GAS PUCHONG - N" },
+      { no: 164, bank: "MBB_InterBank", customerId: "UMGC", locationId: "5514", locationName: "UMGC MENTARI UNION MEDIC - N" },
+      { no: 165, bank: "MBB_InterBank", customerId: "UMGC", locationId: "5508", locationName: "UMGC RAMPAI MEDIC - N" },
+      { no: 166, bank: "MBB_InterBank", customerId: "UMGC", locationId: "5511", locationName: "UMGC MAYANG JAYA UNION MEDIC - N" },
+      { no: 167, bank: "MBB_InterBank", customerId: "YAAL", locationId: "3896", locationName: "YARL RESTAURANT BRICKFIELDS - N" },
+      { no: 168, bank: "MBB_InterBank", customerId: "YAAL", locationId: "3237", locationName: "YAAL RESTAURANT TTDI - N" }
+    ];
+
+    // ==========================================
+    // 2. STATE & STORAGE MANAGEMENT
+    // ==========================================
+    const STORAGE_KEY_RECORDS = 'sgss360_records_v6';
+    const STORAGE_KEY_META = 'sgss360_meta_v6';
+    const STORAGE_KEY_THEME = 'sgss360_theme_v6';
+
+    let records = [];
+    let meta = {
+      fileName: 'Master List SGSS 360',
+      updatedDate: new Date().toLocaleDateString('ms-MY')
+    };
+    let currentFilter = 'all'; 
+    let searchQuery = '';
+    let ocrMatchedIds = new Set();
+    let activeStream = null;
+    let deferredInstallPrompt = null;
+
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    function generateId() {
+      return 'rec_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    }
+
+    function loadState() {
+      try {
+        const savedRecords = localStorage.getItem(STORAGE_KEY_RECORDS);
+        const savedMeta = localStorage.getItem(STORAGE_KEY_META);
+        const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+
+        if (savedTheme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
+        }
+
+        if (savedRecords) {
+          records = JSON.parse(savedRecords);
+        } else {
+          records = DEFAULT_MASTER_RECORDS.map(item => ({
+            ...item,
+            id: generateId(),
+            verified: false,
+            verifiedAt: null
+          }));
+          saveState();
+        }
+
+        if (savedMeta) {
+          meta = JSON.parse(savedMeta);
+        }
+      } catch (err) {
+        console.error('Ralat memuatkan data:', err);
+        records = DEFAULT_MASTER_RECORDS.map(item => ({
+          ...item,
+          id: generateId(),
+          verified: false,
+          verifiedAt: null
+        }));
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(records));
+        localStorage.setItem(STORAGE_KEY_META, JSON.stringify(meta));
+      } catch (err) {
+        showToast('Amaran: Ruang simpanan penuh', 'error');
+      }
+    }
+
+    // ==========================================
+    // 3. UI RENDERING & STATS
+    // ==========================================
+    function updateHeaderAndStats() {
+      const total = records.length;
+      const verifiedCount = records.filter(r => r.verified).length;
+      const unverifiedCount = total - verifiedCount;
+      const percent = total > 0 ? Math.round((verifiedCount / total) * 100) : 0;
+
+      document.getElementById('activeFileInfo').textContent = `${meta.fileName} (${total} Rekod)`;
+      document.getElementById('counterText').textContent = `Disahkan: ${verifiedCount} / ${total} (${percent}%)`;
+      document.getElementById('progressBar').style.width = `${percent}%`;
+
+      document.getElementById('countAll').textContent = total;
+      document.getElementById('countVerified').textContent = verifiedCount;
+      document.getElementById('countUnverified').textContent = unverifiedCount;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function renderRecords() {
+      updateHeaderAndStats();
+      const container = document.getElementById('recordsList');
+      const emptyState = document.getElementById('emptyState');
+      const query = searchQuery.trim().toLowerCase();
+
+      const filtered = records.filter(rec => {
+        if (currentFilter === 'verified' && !rec.verified) return false;
+        if (currentFilter === 'unverified' && rec.verified) return false;
+
+        if (query) {
+          const matchCust = (rec.customerId || '').toLowerCase().includes(query);
+          const matchLocId = (rec.locationId || '').toLowerCase().includes(query);
+          const matchLocName = (rec.locationName || '').toLowerCase().includes(query);
+          const matchNo = String(rec.no).includes(query);
+          return matchCust || matchLocId || matchLocName || matchNo;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      container.innerHTML = filtered.map(rec => {
+        const isOcrMatch = ocrMatchedIds.has(rec.id);
+        const cardBorder = rec.verified
+          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/25'
+          : isOcrMatch
+            ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20 ring-2 ring-amber-400/50'
+            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900';
+
+        const checkBoxStyle = rec.verified
+          ? 'bg-emerald-500 border-emerald-500 text-white shadow-md shadow-emerald-500/30 scale-105'
+          : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-transparent hover:border-emerald-500';
+
+        return `
+          <div class="rounded-2xl border-2 ${cardBorder} p-3.5 shadow-sm transition-all duration-150 flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0 space-y-1.5">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] font-bold">
+                  #${escapeHtml(rec.no)}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-md bg-blue-600/15 text-blue-700 dark:text-blue-400 text-xs font-extrabold tracking-wide">
+                  ${escapeHtml(rec.customerId)}
+                </span>
+                <span class="px-2.5 py-0.5 rounded-md bg-purple-600/15 text-purple-700 dark:text-purple-400 text-xs font-extrabold tracking-wide font-mono">
+                  ID: ${escapeHtml(rec.locationId)}
+                </span>
+                ${isOcrMatch ? `<span class="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 text-[10px] font-extrabold uppercase">Padanan OCR</span>` : ''}
+              </div>
+
+              <h3 class="font-bold text-sm sm:text-base text-slate-900 dark:text-white leading-snug break-words">
+                ${escapeHtml(rec.locationName)}
+              </h3>
+
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <span><i class="fa-solid fa-building-columns mr-1"></i>${escapeHtml(rec.bank)}</span>
+                ${rec.verified && rec.verifiedAt ? `
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <i class="fa-solid fa-clock mr-1"></i>Betul: ${escapeHtml(rec.verifiedAt)}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <button 
+                onclick="openEditModal('${rec.id}')" 
+                aria-label="Sunting Rekod"
+                class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition cursor-pointer"
+              >
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+
+              <button 
+                onclick="toggleVerify('${rec.id}')" 
+                aria-label="Tanda Betul"
+                class="w-14 h-14 rounded-2xl border-2 ${checkBoxStyle} flex flex-col items-center justify-center transition-all duration-150 active:scale-95 cursor-pointer"
+              >
+                <i class="fa-solid fa-check text-2xl font-black"></i>
+                <span class="text-[9px] font-extrabold uppercase tracking-wider mt-0.5 ${rec.verified ? 'text-white' : 'text-slate-400'}">
+                  ${rec.verified ? 'BETUL' : 'SAH'}
+                </span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // 4. VERIFICATION TOGGLE & CRUD OPERATIONS
+    // ==========================================
+    window.toggleVerify = function(id) {
+      const idx = records.findIndex(r => r.id === id);
+      if (idx === -1) return;
+
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+
+      records[idx].verified = !records[idx].verified;
+      records[idx].verifiedAt = records[idx].verified ? timeStr : null;
+
+      saveState();
+      renderRecords();
+
+      if (records[idx].verified) {
+        showToast(`Disahkan BETUL: ${records[idx].customerId} (${records[idx].locationId})`, 'success');
+      }
+    };
+
+    window.openEditModal = function(id) {
+      const modal = document.getElementById('editModal');
+      const form = document.getElementById('editRecordForm');
+      const deleteBtn = document.getElementById('deleteRecordBtn');
+
+      if (id) {
+        const rec = records.find(r => r.id === id);
+        if (!rec) return;
+        document.getElementById('editModalTitle').textContent = 'Sunting Rekod Lokasi';
+        document.getElementById('editRecordId').value = rec.id;
+        document.getElementById('fieldNo').value = rec.no;
+        document.getElementById('fieldBank').value = rec.bank;
+        document.getElementById('fieldCustomerId').value = rec.customerId;
+        document.getElementById('fieldLocationId').value = rec.locationId;
+        document.getElementById('fieldLocationName').value = rec.locationName;
+        deleteBtn.classList.remove('hidden');
+      } else {
+        document.getElementById('editModalTitle').textContent = 'Tambah Rekod Lokasi Baru';
+        document.getElementById('editRecordId').value = '';
+        const nextNo = records.length > 0 ? Math.max(...records.map(r => Number(r.no) || 0)) + 1 : 1;
+        document.getElementById('fieldNo').value = nextNo;
+        document.getElementById('fieldBank').value = 'MBB_InterBank';
+        document.getElementById('fieldCustomerId').value = '';
+        document.getElementById('fieldLocationId').value = '';
+        document.getElementById('fieldLocationName').value = '';
+        deleteBtn.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+    };
+
+    document.getElementById('editRecordForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('editRecordId').value;
+      const updatedData = {
+        no: Number(document.getElementById('fieldNo').value) || 1,
+        bank: document.getElementById('fieldBank').value.trim() || 'MBB_InterBank',
+        customerId: document.getElementById('fieldCustomerId').value.trim().toUpperCase(),
+        locationId: document.getElementById('fieldLocationId').value.trim().toUpperCase(),
+        locationName: document.getElementById('fieldLocationName').value.trim().toUpperCase()
+      };
+
+      if (id) {
+        const idx = records.findIndex(r => r.id === id);
+        if (idx !== -1) {
+          records[idx] = { ...records[idx], ...updatedData };
+          showToast('Rekod berjaya dikemas kini');
+        }
+      } else {
+        records.unshift({
+          ...updatedData,
+          id: generateId(),
+          verified: false,
+          verifiedAt: null
+        });
+        showToast('Rekod baru berjaya ditambah');
+      }
+
+      saveState();
+      renderRecords();
+      document.getElementById('editModal').classList.add('hidden');
+    });
+
+    document.getElementById('deleteRecordBtn').addEventListener('click', function() {
+      const id = document.getElementById('editRecordId').value;
+      if (!id) return;
+      document.getElementById('editModal').classList.add('hidden');
+      showConfirm('Padam Rekod?', 'Adakah anda pasti mahu memadam rekod lokasi ini?', () => {
+        records = records.filter(r => r.id !== id);
+        saveState();
+        renderRecords();
+        showToast('Rekod telah dipadam');
+      });
+    });
+
+    // ==========================================
+    // 5. CAMERA & OCR SCANNER
+    // ==========================================
+    async function startCamera() {
+      const modal = document.getElementById('cameraModal');
+      const video = document.getElementById('cameraVideo');
+      const previewImg = document.getElementById('previewCapturedImg');
+      const placeholder = document.getElementById('cameraPlaceholder');
+      const overlay = document.getElementById('scannerOverlay');
+      const snapBtn = document.getElementById('snapPhotoBtn');
+
+      modal.classList.remove('hidden');
+      previewImg.classList.add('hidden');
+      video.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+      overlay.classList.remove('hidden');
+      snapBtn.classList.remove('opacity-50');
+      document.getElementById('ocrStatusBox').classList.add('hidden');
+
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Kamera web tidak disokong');
+        }
+
+        try {
+          activeStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false
+          });
+        } catch (e) {
+          activeStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+          });
+        }
+
+        video.srcObject = activeStream;
+        await video.play();
+      } catch (err) {
+        console.warn('Live stream kamera disekat/tiada:', err);
+        video.classList.add('hidden');
+        overlay.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        snapBtn.classList.add('opacity-50');
+        
+        // AUTO FALLBACK: Terus buka kamera HP jika kamera web gagal
+        setTimeout(() => {
+            document.getElementById('ocrNativeCameraInput').click();
+        }, 500);
+      }
+    }
+
+    function stopCamera() {
+      const video = document.getElementById('cameraVideo');
+      if (activeStream) {
+        activeStream.getTracks().forEach(track => track.stop());
+        activeStream = null;
+      }
+      if (video) {
+        video.srcObject = null;
+      }
+      document.getElementById('cameraModal').classList.add('hidden');
+    }
+
+    async function processImageWithOCR(imageSource) {
+      const statusBox = document.getElementById('ocrStatusBox');
+      const statusText = document.getElementById('ocrStatusText');
+      const progressBar = document.getElementById('ocrProgressBar');
+
+      statusBox.classList.remove('hidden');
+      statusText.textContent = 'Memulakan enjin OCR...';
+      progressBar.style.width = '20%';
+
+      try {
+        const worker = await Tesseract.createWorker('eng', 1, {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              const pct = Math.round(m.progress * 100);
+              statusText.textContent = `Mengimbas teks... ${pct}%`;
+              progressBar.style.width = `${Math.max(20, pct)}%`;
+            }
+          }
+        });
+
+        const { data: { text } } = await worker.recognize(imageSource);
+        await worker.terminate();
+
+        matchOcrTextAgainstRecords(text);
+        stopCamera();
+      } catch (err) {
+        console.error('OCR Error:', err);
+        statusText.textContent = 'Gagal membaca gambar. Cuba gambar yang lebih jelas.';
+        showToast('Ralat semasa imbasan OCR', 'error');
+      }
+    }
+
+    // ==========================================
+    // LOGIK PADANAN OCR (FUZZY MATCH & AUTO-VERIFY)
+    // ==========================================
+    function matchOcrTextAgainstRecords(rawText) {
+      const cleanFullText = rawText.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      
+      ocrMatchedIds.clear();
+      let autoVerifiedCount = 0;
+
+      records.forEach(rec => {
+        const dbName = (rec.locationName || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const dbId = (rec.locationId || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        
+        let isMatch = false;
+
+        if (dbName.length > 4 && cleanFullText.includes(dbName)) {
+          isMatch = true;
+        } 
+        else if (dbId.length > 3 && cleanFullText.includes(dbId)) {
+          isMatch = true;
+        }
+
+        if (isMatch) {
+          ocrMatchedIds.add(rec.id);
+          
+          if (!rec.verified) {
+            rec.verified = true;
+            rec.verifiedAt = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+            autoVerifiedCount++;
+          }
+        }
+      });
+
+      const banner = document.getElementById('ocrResultBanner');
+      const summary = document.getElementById('ocrExtractedSummary');
+      banner.classList.remove('hidden');
+
+      if (ocrMatchedIds.size > 0) {
+        records.sort((a, b) => {
+          const aMatch = ocrMatchedIds.has(a.id) ? 1 : 0;
+          const bMatch = ocrMatchedIds.has(b.id) ? 1 : 0;
+          return bMatch - aMatch;
+        });
+
+        summary.textContent = `Berjaya padan ${ocrMatchedIds.size} lokasi. (${autoVerifiedCount} ditanda BETUL). Teks: "${rawText.trim().slice(0, 60)}..."`;
+        
+        searchQuery = '';
+        document.getElementById('searchInput').value = '';
+        currentFilter = 'all';
+        updateFilterTabsUI();
+        
+        saveState(); 
+        renderRecords();
+        showToast(`${ocrMatchedIds.size} lokasi dipadankan & ditanda BETUL!`, 'success');
+      } else {
+        summary.textContent = `Tiada padanan ditemui. Teks: "${rawText.trim().slice(0, 100)}"`;
+        renderRecords();
+        showToast('Tiada padanan. Pastikan gambar jelas.', 'error');
+      }
+    }
+
+    document.getElementById('snapPhotoBtn').addEventListener('click', () => {
+      const video = document.getElementById('cameraVideo');
+      const canvas = document.getElementById('captureCanvas');
+      const previewImg = document.getElementById('previewCapturedImg');
+
+      if (!activeStream || !video.videoWidth) {
+        document.getElementById('ocrNativeCameraInput').click();
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      previewImg.src = dataUrl;
+      video.classList.add('hidden');
+      document.getElementById('scannerOverlay').classList.add('hidden');
+      previewImg.classList.remove('hidden');
+
+      processImageWithOCR(dataUrl);
+    });
+
+    function handleSelectedImageFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const previewImg = document.getElementById('previewCapturedImg');
+        previewImg.src = ev.target.result;
+        document.getElementById('cameraVideo').classList.add('hidden');
+        document.getElementById('cameraPlaceholder').classList.add('hidden');
+        document.getElementById('scannerOverlay').classList.add('hidden');
+        previewImg.classList.remove('hidden');
+        processImageWithOCR(ev.target.result);
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    document.getElementById('ocrNativeCameraInput').addEventListener('change', handleSelectedImageFile);
+    document.getElementById('ocrImageInput').addEventListener('change', handleSelectedImageFile);
+
+    // ==========================================
+    // 6. UPLOAD & PARSE FILE (DAILY FILE)
+    // ==========================================
+    document.getElementById('dailyFileInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const statusMsg = document.getElementById('uploadStatusMsg');
+      statusMsg.className = 'text-xs font-semibold p-3 rounded-xl bg-blue-500/15 text-blue-500 block';
+      statusMsg.textContent = `Memproses fail "${file.name}"...`;
+
+      const mode = document.querySelector('input[name="importMode"]:checked').value;
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      try {
+        let parsedRecords = [];
+
+        if (ext === 'json') {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          if (Array.isArray(data)) {
+            parsedRecords = data.map((item, idx) => ({
+              id: generateId(),
+              no: item.no || idx + 1,
+              bank: item.bank || 'MBB_InterBank',
+              customerId: String(item.customerId || '').toUpperCase().trim(),
+              locationId: String(item.locationId || '').toUpperCase().trim(),
+              locationName: String(item.locationName || '').toUpperCase().trim(),
+              verified: Boolean(item.verified),
+              verifiedAt: item.verifiedAt || null
+            })).filter(r => r.customerId || r.locationId);
+          }
+        } else if (ext === 'csv' || ext === 'xlsx' || ext === 'xls') {
+          const arrayBuffer = await file.arrayBuffer();
+          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+          rows.forEach((row, index) => {
+            if (!row || row.length < 3) return;
+            const joined = row.join(' ').toLowerCase();
+            if (joined.includes('customer id') || joined.includes('location id')) return;
+
+            let no = index + 1, bank = 'MBB_InterBank', customerId = '', locationId = '', locationName = '';
+            if (row.length >= 5) {
+              no = Number(row[0]) || index + 1;
+              bank = String(row[1] || 'MBB_InterBank').trim();
+              customerId = String(row[2] || '').trim().toUpperCase();
+              locationId = String(row[3] || '').trim().toUpperCase();
+              locationName = String(row[4] || '').trim().toUpperCase();
+            } else if (row.length === 4) {
+              bank = String(row[0] || 'MBB_InterBank').trim();
+              customerId = String(row[1] || '').trim().toUpperCase();
+              locationId = String(row[2] || '').trim().toUpperCase();
+              locationName = String(row[3] || '').trim().toUpperCase();
+            } else if (row.length === 3) {
+              customerId = String(row[0] || '').trim().toUpperCase();
+              locationId = String(row[1] || '').trim().toUpperCase();
+              locationName = String(row[2] || '').trim().toUpperCase();
+            }
+
+            if (customerId || locationId) {
+              parsedRecords.push({
+                id: generateId(),
+                no,
+                bank,
+                customerId,
+                locationId,
+                locationName: locationName || `${customerId} - ${locationId}`,
+                verified: false,
+                verifiedAt: null
+              });
+            }
+          });
+        } else if (ext === 'pdf') {
+          parsedRecords = await parseSgssPdfFile(file);
+        } else {
+          throw new Error('Format fail tidak disokong.');
+        }
+
+        if (parsedRecords.length === 0) {
+          throw new Error('Tiada rekod sah dijumpai dalam fail ini.');
+        }
+
+        if (mode === 'replace') {
+          records = parsedRecords;
+        } else {
+          const existingKeys = new Set(records.map(r => `${r.customerId}_${r.locationId}`));
+          parsedRecords.forEach(pr => {
+            const key = `${pr.customerId}_${pr.locationId}`;
+            if (!existingKeys.has(key)) {
+              records.push(pr);
+              existingKeys.add(key);
+            }
+          });
+        }
+
+        meta.fileName = file.name.replace(/\.[^/.]+$/, '');
+        meta.updatedDate = new Date().toLocaleDateString('ms-MY');
+        ocrMatchedIds.clear();
+        saveState();
+        renderRecords();
+
+        statusMsg.className = 'text-xs font-semibold p-3 rounded-xl bg-emerald-500/15 text-emerald-500 block';
+        statusMsg.textContent = `Berjaya memuatkan ${parsedRecords.length} rekod daripada ${file.name}!`;
+        showToast(`${parsedRecords.length} rekod harian dimuatkan!`, 'success');
+
+        setTimeout(() => {
+          document.getElementById('uploadModal').classList.add('hidden');
+          statusMsg.classList.add('hidden');
+        }, 1100);
+
+      } catch (err) {
+        console.error(err);
+        statusMsg.className = 'text-xs font-semibold p-3 rounded-xl bg-rose-500/15 text-rose-500 block';
+        statusMsg.textContent = `Ralat: ${err.message || 'Gagal membaca fail.'}`;
+      }
+
+      e.target.value = '';
+    });
+
+    async function parseSgssPdfFile(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const items = textContent.items.sort((a, b) => {
+          const yDiff = Math.abs(b.transform[5] - a.transform[5]);
+          if (yDiff > 4) return b.transform[5] - a.transform[5];
+          return a.transform[4] - b.transform[4];
+        });
+
+        let lastY = null;
+        items.forEach(item => {
+          const y = item.transform[5];
+          if (lastY !== null && Math.abs(y - lastY) > 5) {
+            fullText += '\n';
+          } else {
+            fullText += ' | ';
+          }
+          fullText += item.str.trim();
+          lastY = y;
+        });
+        fullText += '\n';
+      }
+
+      const lines = fullText.split('\n');
+      const extracted = [];
+      let counter = 1;
+
+      lines.forEach(line => {
+        const cleanLine = line.replace(/\|+/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!cleanLine || cleanLine.includes('Customer ID') || cleanLine.includes('SGSS 360 FLOAT')) return;
+
+        const match = cleanLine.match(/(?:^(\d+)\s+)?(MBB[_\s]?InterBank)\s+([A-Z0-9]{2,12})\s+([A-Z0-9]{2,10})\s+(.+)$/i);
+        if (match) {
+          extracted.push({
+            id: generateId(),
+            no: match[1] ? Number(match[1]) : counter++,
+            bank: match[2].replace(/\s+/g, '_'),
+            customerId: match[3].toUpperCase(),
+            locationId: match[4].toUpperCase(),
+            locationName: match[5].toUpperCase().trim(),
+            verified: false,
+            verifiedAt: null
+          });
+        }
+      });
+
+      return extracted;
+    }
+
+    // ==========================================
+    // 7. EXPORT, SHARE & RESET FUNCTIONS
+    // ==========================================
+    function generateCsvContent() {
+      const headers = ['No', 'SDC Bank', 'Customer ID', 'Location ID', 'Location Name', 'Status Pengesahan', 'Masa Disahkan'];
+      const rows = records.map(r => [
+        r.no,
+        r.bank,
+        r.customerId,
+        r.locationId,
+        `"${(r.locationName || '').replace(/"/g, '""')}"`,
+        r.verified ? 'BETUL' : 'BELUM',
+        r.verifiedAt || '-'
+      ]);
+      return [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    }
+
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const csvContent = generateCsvContent();
+      downloadBlob(csvContent, `SGSS_360_Laporan_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+      showToast('Laporan CSV dimuat turun');
+    });
+
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      const jsonContent = JSON.stringify(records, null, 2);
+      downloadBlob(jsonContent, `SGSS_360_Backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
+      showToast('Fail sandaran JSON dimuat turun');
+    });
+
+    document.getElementById('shareWhatsappBtn').addEventListener('click', async () => {
+      const csvContent = generateCsvContent();
+      const fileName = `SGSS_360_Laporan_${new Date().toISOString().slice(0, 10)}.csv`;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const file = new File([blob], fileName, { type: 'text/csv' });
+
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Laporan SGSS 360',
+            text: 'Sila lihat lampiran laporan pengesahan SGSS 360.'
+          });
+          showToast('Laporan berjaya dikongsi!', 'success');
+        } catch (error) {
+          if (error.name !== 'AbortError') {
+            console.error('Ralat perkongsian:', error);
+            showToast('Gagal berkongsi fail.', 'error');
+          }
+        }
+      } else {
+        showToast('Perkongsian fail tidak disokong. Fail akan dimuat turun.', 'error');
+        downloadBlob(csvContent, fileName, 'text/csv;charset=utf-8;');
+      }
+    });
+
+    function downloadBlob(content, filename, contentType) {
+      const blob = new Blob([content], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('resetChecksBtn').addEventListener('click', () => {
+      document.getElementById('menuModal').classList.add('hidden');
+      showConfirm('Reset Semua Tanda Betul?', 'Semua kotak bertanda betul akan dikosongkan untuk sesi kerja hari baharu.', () => {
+        records = records.map(r => ({ ...r, verified: false, verifiedAt: null }));
+        ocrMatchedIds.clear();
+        saveState();
+        renderRecords();
+        showToast('Semua tanda betul telah direset');
+      });
+    });
+
+    document.getElementById('restoreDefaultBtn').addEventListener('click', () => {
+      document.getElementById('menuModal').classList.add('hidden');
+      showConfirm('Pulihkan 168 Rekod Asal?', 'Senarai semasa akan digantikan dengan 168 rekod induk SGSS 360 FLOAT asal.', () => {
+        records = DEFAULT_MASTER_RECORDS.map(item => ({
+          ...item,
+          id: generateId(),
+          verified: false,
+          verifiedAt: null
+        }));
+        meta.fileName = 'Master List SGSS 360';
+        ocrMatchedIds.clear();
+        saveState();
+        renderRecords();
+        showToast('168 rekod asal berjaya dipulihkan');
+      });
+    });
+
+    // ==========================================
+    // 8. EVENT LISTENERS & HELPERS
+    // ==========================================
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      if (searchQuery.length > 0) {
+        clearSearchBtn.classList.remove('hidden');
+      } else {
+        clearSearchBtn.classList.add('hidden');
+      }
+      renderRecords();
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+      searchQuery = '';
+      searchInput.value = '';
+      clearSearchBtn.classList.add('hidden');
+      renderRecords();
+    });
+
+    function updateFilterTabsUI() {
+      document.querySelectorAll('.filter-tab').forEach(btn => {
+        if (btn.dataset.filter === currentFilter) {
+          btn.className = 'filter-tab active px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition cursor-pointer';
+        } else {
+          btn.className = 'filter-tab px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer';
+        }
+      });
+    }
+
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter;
+        updateFilterTabsUI();
+        renderRecords();
+      });
+    });
+
+    document.getElementById('openCameraBtn').addEventListener('click', startCamera);
+    document.getElementById('closeCameraModalBtn').addEventListener('click', stopCamera);
+
+    document.getElementById('openUploadBtn').addEventListener('click', () => {
+      document.getElementById('uploadModal').classList.remove('hidden');
+    });
+    document.getElementById('closeUploadModalBtn').addEventListener('click', () => {
+      document.getElementById('uploadModal').classList.add('hidden');
+    });
+
+    document.getElementById('addRecordBtn').addEventListener('click', () => openEditModal(null));
+    document.getElementById('closeEditModalBtn').addEventListener('click', () => {
+      document.getElementById('editModal').classList.add('hidden');
+    });
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+      document.getElementById('editModal').classList.add('hidden');
+    });
+
+    document.getElementById('openMenuBtn').addEventListener('click', () => {
+      document.getElementById('menuModal').classList.remove('hidden');
+    });
+    document.getElementById('closeMenuModalBtn').addEventListener('click', () => {
+      document.getElementById('menuModal').classList.add('hidden');
+    });
+
+    document.getElementById('closeOcrBannerBtn').addEventListener('click', () => {
+      document.getElementById('ocrResultBanner').classList.add('hidden');
+      ocrMatchedIds.clear();
+      renderRecords();
+    });
+
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEY_THEME, isDark ? 'dark' : 'light');
+    });
+
+    function showConfirm(title, message, onConfirm) {
+      const modal = document.getElementById('confirmModal');
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      modal.classList.remove('hidden');
+
+      const okBtn = document.getElementById('confirmOkBtn');
+      const cancelBtn = document.getElementById('confirmCancelBtn');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+      };
+
+      cancelBtn.onclick = cleanup;
+      okBtn.onclick = () => {
+        cleanup();
+        onConfirm();
+      };
+    }
+
+    let toastTimer = null;
+    function showToast(msg, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toastIcon');
+      const text = document.getElementById('toastText');
+
+      text.textContent = msg;
+      icon.className = type === 'error'
+        ? 'fa-solid fa-circle-exclamation text-rose-400'
+        : 'fa-solid fa-circle-check text-emerald-400';
+
+      toast.classList.remove('opacity-0', 'translate-y-4');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4');
+      }, 2600);
+    }
+
+    // ==========================================
+    // 9. PWA MANIFEST & INSTALL PROMPT SETUP
+    // ==========================================
+    function setupPwaManifest() {
+      const manifest = {
+        name: 'SGSS 360 FLOAT Verification',
+        short_name: 'SGSS 360',
+        description: 'Aplikasi pengesahan lokasi dan Customer ID SGSS 360 FLOAT oleh Ayie.tech',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#0f172a',
+        theme_color: '#0f172a',
+        icons: [
+          {
+            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%2310b981'/%3E%3Cpath d='M54 98l28 28 56-56' stroke='%230f172a' stroke-width='18' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+            sizes: '192x192',
+            type: 'image/svg+xml'
+          }
+        ]
+      };
+
+      const stringManifest = JSON.stringify(manifest);
+      const blob = new Blob([stringManifest], { type: 'application/json' });
+      const manifestURL = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      document.getElementById('installAppBtn').classList.remove('hidden');
+    });
+
+    document.getElementById('installAppBtn').addEventListener('click', async () => {
+      if (!deferredInstallPrompt) return;
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('installAppBtn').classList.add('hidden');
+      }
+      deferredInstallPrompt = null;
+    });
+
+    // Boot Application
+    window.addEventListener('DOMContentLoaded', () => {
+      setupPwaManifest();
+      loadState();
+      renderRecords();
+    });
+  </script>
+</body>
+</html>
